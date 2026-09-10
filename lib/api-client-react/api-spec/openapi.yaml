@@ -1,0 +1,786 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: dashboard
+    description: Control room summary operations
+  - name: scenarios
+    description: Scenario catalog operations
+  - name: runs
+    description: Agentic orchestration run operations
+  - name: urls
+    description: URL shortener operations
+  - name: activity
+    description: Audit and observability operations
+  - name: agent
+    description: Approval-gated AI engineering planning operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get control room dashboard
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /scenarios:
+    get:
+      operationId: listScenarios
+      tags: [scenarios]
+      summary: List engineering scenarios
+      responses:
+        "200":
+          description: Scenario catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scenario"
+  /runs:
+    get:
+      operationId: listRuns
+      tags: [runs]
+      summary: List orchestration runs
+      responses:
+        "200":
+          description: Orchestration runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Run"
+    post:
+      operationId: createRun
+      tags: [runs]
+      summary: Start an orchestration run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunInput"
+      responses:
+        "201":
+          description: Run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+  /runs/{runId}/approve:
+    post:
+      operationId: approveRun
+      tags: [runs]
+      summary: Approve a human checkpoint
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run advanced after approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+  /runs/{runId}/retry:
+    post:
+      operationId: retryRun
+      tags: [runs]
+      summary: Retry a failed task
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run retried
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+  /runs/{runId}/rollback:
+    post:
+      operationId: rollbackRun
+      tags: [runs]
+      summary: Roll back a run to its last safe checkpoint
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run rolled back
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+  /runs/{runId}/stop:
+    post:
+      operationId: stopRun
+      tags: [runs]
+      summary: Safely stop a run and block unfinished work
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: Run safely stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+  /urls:
+    get:
+      operationId: listUrls
+      tags: [urls]
+      summary: List shortened URLs
+      responses:
+        "200":
+          description: Shortened URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShortUrl"
+    post:
+      operationId: createUrl
+      tags: [urls]
+      summary: Create a shortened URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UrlInput"
+      responses:
+        "201":
+          description: Shortened URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortUrl"
+  /urls/{slug}:
+    get:
+      operationId: getUrl
+      tags: [urls]
+      summary: Resolve a shortened URL
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: Resolved URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortUrl"
+        "404":
+          description: URL not found
+    delete:
+      operationId: deleteUrl
+      tags: [urls]
+      summary: Deactivate a shortened URL
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "204":
+          description: URL deactivated
+  /urls/{slug}/analytics:
+    get:
+      operationId: getUrlAnalytics
+      tags: [urls]
+      summary: Get analytics for a shortened URL
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: URL analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UrlAnalytics"
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [activity]
+      summary: List recent audit events
+      responses:
+        "200":
+          description: Recent audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+  /agent/plans:
+    post:
+      operationId: createAgentPlan
+      tags: [agent]
+      summary: Generate and persist an AI engineering plan for operator review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentPlanInput"
+      responses:
+        "201":
+          description: Persisted AI engineering plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentPlan"
+  /agent/plans/{planId}:
+    get:
+      operationId: getAgentPlan
+      tags: [agent]
+      summary: Retrieve a plan and its immutable revisions
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      responses:
+        "200":
+          description: Plan detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentPlanDetail"
+  /agent/plans/{planId}/approve:
+    post:
+      operationId: decideAgentPlan
+      tags: [agent]
+      summary: Scope-bound approval or feedback rejection
+      parameters:
+        - $ref: "#/components/parameters/PlanId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanDecisionInput"
+      responses:
+        "200":
+          description: New execution or revised plan
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ExecutionRun"
+                  - $ref: "#/components/schemas/AgentPlan"
+  /executions/{executionId}:
+    get:
+      operationId: getExecution
+      tags: [agent]
+      summary: Get autonomous execution detail
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: Execution detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionRun"
+  /executions/{executionId}/events:
+    get:
+      operationId: listExecutionEvents
+      tags: [agent]
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: Ordered execution events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionEvent"
+  /executions/{executionId}/artifacts:
+    get:
+      operationId: listExecutionArtifacts
+      tags: [agent]
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: Persisted bounded artifacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionArtifact"
+  /executions/{executionId}/replan:
+    post:
+      operationId: replanExecution
+      tags: [agent]
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplanInput"
+      responses:
+        "200":
+          description: New paused plan revision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentPlan"
+  /executions/{executionId}/stop:
+    post:
+      operationId: stopExecution
+      tags: [agent]
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: Safe-stop requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionRun"
+  /executions/{executionId}/receipt:
+    get:
+      operationId: getExecutionReceipt
+      tags: [agent]
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: Final execution receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionArtifact"
+components:
+  parameters:
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema:
+        type: string
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+    ExecutionId:
+      name: executionId
+      in: path
+      required: true
+      schema:
+        type: string
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    DashboardSummary:
+      type: object
+      required: [activeRuns, urlsCreated, clicksToday, reliability, pendingApprovals, recentActivity]
+      properties:
+        activeRuns:
+          type: integer
+        urlsCreated:
+          type: integer
+        clicksToday:
+          type: integer
+        reliability:
+          type: number
+        pendingApprovals:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+    Scenario:
+      type: object
+      required: [id, name, kind, description, status, taskCount, riskLevel, lastRun]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [greenfield, brownfield, ambiguous]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [ready, running, needs_review, completed]
+        taskCount:
+          type: integer
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+        lastRun:
+          type: ["string", "null"]
+    Task:
+      type: object
+      required: [id, name, stage, status, dependencies, owner, attempts, durationMs, gate]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        stage:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, blocked, failed, approved, rolled_back]
+        dependencies:
+          type: array
+          items:
+            type: string
+        owner:
+          type: string
+        attempts:
+          type: integer
+        durationMs:
+          type: integer
+        gate:
+          type: string
+          enum: [none, entry, approval, exit]
+    Run:
+      type: object
+      required: [id, scenarioId, scenarioName, status, startedAt, updatedAt, progress, risk, tasks, approvals, retries, rollbacks, mttrSeconds, endToEndLatencyMs]
+      properties:
+        id:
+          type: string
+        scenarioId:
+          type: string
+        scenarioName:
+          type: string
+        status:
+          type: string
+          enum: [running, awaiting_approval, completed, failed, rolled_back, stopped]
+        startedAt:
+          type: string
+        updatedAt:
+          type: string
+        progress:
+          type: integer
+        risk:
+          type: string
+          enum: [low, medium, high]
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+        approvals:
+          type: integer
+        retries:
+          type: integer
+        rollbacks:
+          type: integer
+        mttrSeconds:
+          type: integer
+        endToEndLatencyMs:
+          type: integer
+    RunInput:
+      type: object
+      required: [scenarioId]
+      properties:
+        scenarioId:
+          type: string
+    ShortUrl:
+      type: object
+      required: [slug, destination, createdAt, clicks, status, owner]
+      properties:
+        slug:
+          type: string
+        destination:
+          type: string
+        createdAt:
+          type: string
+        clicks:
+          type: integer
+        status:
+          type: string
+          enum: [active, paused]
+        owner:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    UrlInput:
+      type: object
+      required: [destination]
+      properties:
+        destination:
+          type: string
+        slug:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    UrlAnalytics:
+      type: object
+      required: [slug, totalClicks, uniqueVisitors, clickThroughRate, dailyClicks]
+      properties:
+        slug:
+          type: string
+        totalClicks:
+          type: integer
+        uniqueVisitors:
+          type: integer
+        clickThroughRate:
+          type: number
+        dailyClicks:
+          type: array
+          items:
+            type: object
+            required: [day, clicks]
+            properties:
+              day:
+                type: string
+              clicks:
+                type: integer
+        topReferrers:
+          type: array
+          items:
+            type: object
+            required: [source, clicks]
+            properties:
+              source:
+                type: string
+              clicks:
+                type: integer
+    AuditEvent:
+      type: object
+      required: [id, timestamp, actor, action, target, severity, detail]
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+        actor:
+          type: string
+        action:
+          type: string
+        target:
+          type: string
+        severity:
+          type: string
+          enum: [info, success, warning, critical]
+        detail:
+          type: string
+    AgentPlanInput:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+        changeRequest:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    AgentPlanTask:
+      type: object
+      required: [id, title, owner, dependsOn, risk, acceptanceCriteria]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        owner:
+          type: string
+        dependsOn:
+          type: array
+          items:
+            type: string
+        risk:
+          type: string
+          enum: [low, medium, high]
+        acceptanceCriteria:
+          type: array
+          items:
+            type: string
+    AgentPlan:
+      type: object
+      required: [id, scenarioId, normalizedRequirements, assumptions, risks, tasks, model, createdAt, revision, scopeHash, highRisk]
+      properties:
+        id:
+          type: string
+        scenarioId:
+          type: string
+        normalizedRequirements:
+          type: array
+          items:
+            type: string
+        assumptions:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentPlanTask"
+        model:
+          type: string
+        createdAt:
+          type: string
+        revision:
+          type: integer
+        scopeHash:
+          type: string
+        highRisk:
+          type: boolean
+    PlanRevision:
+      type: object
+      required: [id, planId, revision, request, normalizedRequirements, assumptions, risks, tasks, scopeHash, highRisk, model, createdAt]
+      properties:
+        id: { type: string }
+        planId: { type: string }
+        revision: { type: integer }
+        request: { type: string }
+        normalizedRequirements:
+          type: array
+          items: { type: string }
+        assumptions:
+          type: array
+          items: { type: string }
+        risks:
+          type: array
+          items: { type: string }
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentPlanTask"
+        scopeHash: { type: string }
+        highRisk: { type: boolean }
+        feedback: { type: ["string", "null"] }
+        model: { type: string }
+        createdAt: { type: string }
+    AgentPlanDetail:
+      type: object
+      required: [id, scenarioId, actorId, normalizedRequirements, assumptions, risks, tasks, model, createdAt, revisions]
+      properties:
+        id: { type: string }
+        scenarioId: { type: string }
+        actorId: { type: string }
+        changeRequest: { type: ["string", "null"] }
+        normalizedRequirements:
+          type: array
+          items: { type: string }
+        assumptions:
+          type: array
+          items: { type: string }
+        risks:
+          type: array
+          items: { type: string }
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentPlanTask"
+        model: { type: string }
+        createdAt: { type: string }
+        revisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlanRevision"
+    PlanDecisionInput:
+      type: object
+      required: [decision, revisionId, scopeHash]
+      properties:
+        decision:
+          type: string
+          enum: [approve, request_changes]
+        revisionId: { type: string, minLength: 1 }
+        scopeHash: { type: string, minLength: 64, maxLength: 64 }
+        feedback: { type: string, maxLength: 2000 }
+        approveHighRisk: { type: boolean }
+    ReplanInput:
+      type: object
+      required: [feedback]
+      properties:
+        feedback: { type: string, minLength: 1, maxLength: 2000 }
+    ExecutionRun:
+      type: object
+      required: [id, planId, revisionId, actorId, status, scopeHash, attempt, stopRequested, startedAt, updatedAt]
+      properties:
+        id: { type: string }
+        planId: { type: string }
+        revisionId: { type: string }
+        approvalId: { type: ["string", "null"] }
+        previousRunId: { type: ["string", "null"] }
+        actorId: { type: string }
+        status:
+          type: string
+          enum: [queued, running, replanning, awaiting_approval, stopping, stopped, completed, failed]
+        scopeHash: { type: string }
+        baseCommit: { type: ["string", "null"] }
+        repositoryRoot: { type: ["string", "null"] }
+        attempt: { type: integer }
+        stopRequested: { type: boolean }
+        leaseOwner: { type: ["string", "null"] }
+        leaseExpiresAt: { type: ["string", "null"] }
+        error: { type: ["string", "null"] }
+        startedAt: { type: string }
+        updatedAt: { type: string }
+        finishedAt: { type: ["string", "null"] }
+    ExecutionEvent:
+      type: object
+      required: [id, runId, sequence, type, level, message, metadata, createdAt]
+      properties:
+        id: { type: string }
+        runId: { type: string }
+        sequence: { type: integer }
+        type: { type: string }
+        level: { type: string }
+        message: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string }
+    ExecutionArtifact:
+      type: object
+      required: [id, runId, kind, name, content, metadata, createdAt]
+      properties:
+        id: { type: string }
+        runId: { type: string }
+        kind: { type: string }
+        name: { type: string }
+        content: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        createdAt: { type: string }
+
